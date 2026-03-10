@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Image Reveal Studio v1.0</title>
+
+<style>
+
+html,body{
+margin:0;
+background:#0c0c0c;
+color:white;
+font-family:Arial;
+overflow:hidden;
+}
+
+#app{
+position:relative;
+width:100vw;
+height:100vh;
+display:flex;
+flex-direction:column;
+}
+
+#toolbar{
+height:60px;
+background:#111;
+display:flex;
+align-items:center;
+gap:10px;
+padding:10px;
+border-bottom:1px solid #333;
+}
+
+button,input{
+background:#1f1f1f;
+border:none;
+color:white;
+padding:8px 12px;
+border-radius:6px;
+}
+
+canvas{
+position:absolute;
+top:0;
+left:0;
+}
+
+#viewer{
+position:relative;
+flex:1;
+overflow:hidden;
+}
+
+#selection{
+position:absolute;
+border:2px dashed white;
+pointer-events:auto;
+}
+
+.handle{
+width:14px;
+height:14px;
+background:white;
+border-radius:50%;
+position:absolute;
+}
+
+.tl{top:-7px;left:-7px}
+.tr{top:-7px;right:-7px}
+.bl{bottom:-7px;left:-7px}
+.br{bottom:-7px;right:-7px}
+
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+<div id="toolbar">
+
+<button id="modeWindow">Selection Mode</button>
+<button id="modeBrush">Soft Brush Mode</button>
+
+<label>Brush</label>
+<input id="brushSize" type="range" min="10" max="150" value="40">
+
+<input type="file" id="uploadOverlay">
+<input type="file" id="uploadBackground">
+
+</div>
+
+<div id="viewer">
+
+<img id="bgImg">
+
+<canvas id="overlayCanvas"></canvas>
+
+<div id="selection" style="width:200px;height:200px;left:100px;top:100px;">
+
+<div class="handle tl"></div>
+<div class="handle tr"></div>
+<div class="handle bl"></div>
+<div class="handle br"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* ===============================
+CONFIG (Backend Toggle Simulation)
+=============================== */
+
+/*
+These values would normally come from backend API
+
+Example backend:
+GET /config
+{
+  "enableBrushTool": true,
+  "defaultMode": "window"
+}
+*/
+
+const CONFIG={
+enableBrushTool:true,
+defaultMode:"window"
+}
+
+/* ===============================
+SETUP
+=============================== */
+
+const bg=document.getElementById("bgImg")
+const canvas=document.getElementById("overlayCanvas")
+const ctx=canvas.getContext("2d")
+
+const selection=document.getElementById("selection")
+
+const brushSlider=document.getElementById("brushSize")
+
+let mode=CONFIG.defaultMode
+
+let overlayImage=new Image()
+
+/* ===============================
+DEFAULT IMAGES
+(Replace with IPFS links)
+=============================== */
+
+bg.src="background.jpg"
+overlayImage.src="overlay.png"
+
+overlayImage.onload=resize
+
+function resize(){
+
+canvas.width=bg.clientWidth
+canvas.height=bg.clientHeight
+
+drawOverlay()
+
+}
+
+window.addEventListener("resize",resize)
+
+/* ===============================
+DRAW OVERLAY
+=============================== */
+
+function drawOverlay(){
+
+ctx.globalCompositeOperation="source-over"
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+ctx.drawImage(overlayImage,0,0,canvas.width,canvas.height)
+
+if(mode==="window"){
+revealSelection()
+}
+
+}
+
+function revealSelection(){
+
+const rect=selection.getBoundingClientRect()
+const parent=canvas.getBoundingClientRect()
+
+const x=rect.left-parent.left
+const y=rect.top-parent.top
+
+ctx.clearRect(x,y,selection.offsetWidth,selection.offsetHeight)
+
+}
+
+/* ===============================
+WINDOW DRAGGING
+=============================== */
+
+let dragging=false
+let offsetX=0
+let offsetY=0
+
+selection.addEventListener("pointerdown",(e)=>{
+
+if(mode!=="window") return
+if(e.target.classList.contains("handle")) return
+
+dragging=true
+offsetX=e.offsetX
+offsetY=e.offsetY
+
+})
+
+window.addEventListener("pointermove",(e)=>{
+
+if(!dragging) return
+
+const parent=canvas.getBoundingClientRect()
+
+selection.style.left=(e.clientX-parent.left-offsetX)+"px"
+selection.style.top=(e.clientY-parent.top-offsetY)+"px"
+
+drawOverlay()
+
+})
+
+window.addEventListener("pointerup",()=>dragging=false)
+
+/* ===============================
+RESIZE HANDLES
+=============================== */
+
+document.querySelectorAll(".handle").forEach(handle=>{
+
+handle.addEventListener("pointerdown",(e)=>{
+
+if(mode!=="window") return
+
+e.stopPropagation()
+
+const dir=handle.classList[1]
+
+const startX=e.clientX
+const startY=e.clientY
+
+const startW=selection.offsetWidth
+const startH=selection.offsetHeight
+const startL=selection.offsetLeft
+const startT=selection.offsetTop
+
+function resizeMove(ev){
+
+let dx=ev.clientX-startX
+let dy=ev.clientY-startY
+
+if(dir==="br"){
+selection.style.width=startW+dx+"px"
+selection.style.height=startH+dy+"px"
+}
+
+if(dir==="tl"){
+selection.style.width=startW-dx+"px"
+selection.style.height=startH-dy+"px"
+selection.style.left=startL+dx+"px"
+selection.style.top=startT+dy+"px"
+}
+
+if(dir==="tr"){
+selection.style.width=startW+dx+"px"
+selection.style.height=startH-dy+"px"
+selection.style.top=startT+dy+"px"
+}
+
+if(dir==="bl"){
+selection.style.width=startW-dx+"px"
+selection.style.height=startH+dy+"px"
+selection.style.left=startL+dx+"px"
+}
+
+drawOverlay()
+
+}
+
+function stop(){
+
+window.removeEventListener("pointermove",resizeMove)
+window.removeEventListener("pointerup",stop)
+
+}
+
+window.addEventListener("pointermove",resizeMove)
+window.addEventListener("pointerup",stop)
+
+})
+
+})
+
+/* ===============================
+SOFT REVEAL BRUSH
+=============================== */
+
+let brushing=false
+
+canvas.addEventListener("pointerdown",(e)=>{
+
+if(mode!=="brush") return
+
+brushing=true
+brush(e)
+
+})
+
+canvas.addEventListener("pointermove",(e)=>{
+
+if(!brushing) return
+
+brush(e)
+
+})
+
+window.addEventListener("pointerup",()=>brushing=false)
+
+function brush(e){
+
+const rect=canvas.getBoundingClientRect()
+
+const x=e.clientX-rect.left
+const y=e.clientY-rect.top
+
+const size=brushSlider.value
+
+ctx.globalCompositeOperation="destination-out"
+
+const gradient=ctx.createRadialGradient(x,y,0,x,y,size)
+
+gradient.addColorStop(0,"rgba(0,0,0,1)")
+gradient.addColorStop(1,"rgba(0,0,0,0)")
+
+ctx.fillStyle=gradient
+
+ctx.beginPath()
+ctx.arc(x,y,size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+/* ===============================
+MODE SWITCHING
+=============================== */
+
+document.getElementById("modeWindow").onclick=()=>{
+
+mode="window"
+selection.style.display="block"
+drawOverlay()
+
+}
+
+document.getElementById("modeBrush").onclick=()=>{
+
+if(!CONFIG.enableBrushTool){
+alert("Brush disabled by backend config")
+return
+}
+
+mode="brush"
+selection.style.display="none"
+
+}
+
+/* ===============================
+IMAGE UPLOAD
+=============================== */
+
+document.getElementById("uploadOverlay").onchange=(e)=>{
+
+const file=e.target.files[0]
+
+overlayImage.src=URL.createObjectURL(file)
+
+}
+
+document.getElementById("uploadBackground").onchange=(e)=>{
+
+const file=e.target.files[0]
+
+bg.src=URL.createObjectURL(file)
+
+}
+
+</script>
+
+</body>
+</html>
