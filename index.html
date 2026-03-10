@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Image Reveal Tool</title>
 
 <style>
@@ -20,17 +21,12 @@ body{
     position:relative;
     width:800px;
     max-width:95vw;
+    touch-action:none;
 }
-
+    
 img{
     width:100%;
     display:block;
-}
-
-#overlay{
-    position:absolute;
-    top:0;
-    left:0;
 }
 
 #selection{
@@ -38,6 +34,14 @@ img{
     border:2px dashed white;
     cursor:move;
     box-sizing:border-box;
+    touch-action:none;
+}
+
+#overlay{
+    position:absolute;
+    top:0;
+    left:0;
+    touch-action:none;
 }
 
 .handle{
@@ -112,15 +116,23 @@ let offsetX=0;
 let offsetY=0;
 
 selection.addEventListener("pointerdown",(e)=>{
+
+    e.preventDefault();
+
     if(e.target.classList.contains("handle")) return;
 
     dragging=true;
-    offsetX=e.offsetX;
-    offsetY=e.offsetY;
+
+    offsetX=e.offsetX || (e.clientX - selection.offsetLeft);
+    offsetY=e.offsetY || (e.clientY - selection.offsetTop);
+
 });
 
 window.addEventListener("pointermove",(e)=>{
+
     if(!dragging) return;
+
+    e.preventDefault();
 
     const parent = overlayCanvas.getBoundingClientRect();
 
@@ -131,7 +143,7 @@ window.addEventListener("pointermove",(e)=>{
     selection.style.top = y+"px";
 
     draw();
-});
+});;
 
 window.addEventListener("pointerup",()=>{
     dragging=false;
