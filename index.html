@@ -19,7 +19,7 @@ height:100vh;
 overflow:hidden;
 }
 
-/* Intro */
+/* ---------- Intro ---------- */
 
 #intro{
 position:fixed;
@@ -40,7 +40,7 @@ width:800px;
 max-width:95vw;
 }
 
-/* Container */
+/* ---------- Container ---------- */
 
 #container{
 position:relative;
@@ -50,7 +50,16 @@ opacity:0;
 cursor:pointer;
 }
 
-/* Layered GIF system */
+/* ✅ Background defines layout */
+
+#background{
+width:100%;
+display:block;
+position:relative;
+z-index:1;
+}
+
+/* Overlays */
 
 .layer{
 position:absolute;
@@ -59,7 +68,10 @@ left:0;
 width:100%;
 height:100%;
 object-fit:contain;
+z-index:2;
 }
+
+/* Visibility */
 
 .hidden{
 opacity:0;
@@ -96,7 +108,7 @@ animation:shake 0.35s;
 
 <div id="container">
 
-<img id="background" class="layer">
+<img id="background">
 <img id="overlay2" class="layer">
 <img id="overlay" class="layer">
 
@@ -152,7 +164,7 @@ bg.onload=checkLoaded
 overlay.onload=checkLoaded
 overlay2.onload=checkLoaded
 
-/* Initial load */
+/* Load assets */
 
 let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
 
@@ -175,9 +187,8 @@ clearTimeout(idleTimer)
 /* Hide all */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
-bg.classList.add("hidden")
+bg.classList.remove("hidden") // background always visible
 
-/* Show current */
 if(state==="overlay"){
 overlay.classList.remove("hidden")
 }
@@ -189,7 +200,6 @@ idleTimer=setTimeout(()=>setState("overlay"),7000)
 
 if(state==="background"){
 restartGIF()
-bg.classList.remove("hidden")
 idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
 
