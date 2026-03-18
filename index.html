@@ -3,9 +3,9 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>H&B Peek-A-Boos &copy;</title>
+<title>H&B Peek-A-Boos</title>
 
 <style>
 
@@ -19,14 +19,14 @@ height:100vh;
 overflow:hidden;
 }
 
-/* ---------- Intro ---------- */
+/* Intro */
 
 #intro{
 position:fixed;
 top:0;
 left:0;
-width:100vw;
-height:100vh;
+width:100%;
+height:100%;
 background:black;
 display:flex;
 justify-content:center;
@@ -40,7 +40,7 @@ width:800px;
 max-width:95vw;
 }
 
-/* ---------- App ---------- */
+/* Container */
 
 #container{
 position:relative;
@@ -50,26 +50,35 @@ opacity:0;
 cursor:pointer;
 }
 
-/* IMPORTANT: background defines layout */
-#background{
-width:100%;
-display:block;
-}
+/* Layered GIF system */
 
-#overlayCanvas{
+.layer{
 position:absolute;
 top:0;
 left:0;
+width:100%;
+height:100%;
+object-fit:contain;
 }
 
-/* ---------- Shake ---------- */
+.hidden{
+opacity:0;
+pointer-events:none;
+}
+
+.visible{
+opacity:1;
+transition:opacity 0.35s ease;
+}
+
+/* Shake */
 
 @keyframes shake{
-0%{transform:translate(0,0);}
+0%{transform:translate(0);}
 25%{transform:translate(-6px,4px);}
 50%{transform:translate(6px,-4px);}
 75%{transform:translate(-4px,-6px);}
-100%{transform:translate(0,0);}
+100%{transform:translate(0);}
 }
 
 .shake{
@@ -87,8 +96,9 @@ animation:shake 0.35s;
 
 <div id="container">
 
-<img id="background">
-<canvas id="overlayCanvas"></canvas>
+<img id="background" class="layer">
+<img id="overlay2" class="layer">
+<img id="overlay" class="layer">
 
 </div>
 
@@ -102,43 +112,26 @@ const backgrounds=[
 "https://ipfs.io/ipfs/bafybeife4qi4eiwbiiefjvsclzbynqyysg4zmf4q4t65sc64tbri5hbjji"
 ]
 
-  const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
-  //const overlayCID="https://ipfs.io/ipfs/bafybeie6dd7iq4ajvfvhybbgppom5txmzmz5duo7h27576e5jinpads2ie"
-  const overlay2CID="https://ipfs.io/ipfs/bafybeiesanxrr5dpc3u3psqlqqqhptpujtjpicrswe6zxlussaxjowibt4"
+const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
+const overlay2CID="https://ipfs.io/ipfs/bafybeiesanxrr5dpc3u3psqlqqqhptpujtjpicrswe6zxlussaxjowibt4"
 
 /* -----------------------------
 ELEMENTS
 ----------------------------- */
 
 const bg=document.getElementById("background")
-const canvas=document.getElementById("overlayCanvas")
-const ctx=canvas.getContext("2d")
+const overlay=document.getElementById("overlay")
+const overlay2=document.getElementById("overlay2")
 const container=document.getElementById("container")
 
-const overlayImg=new Image()
-const overlay2Img=new Image()
-
 /* -----------------------------
-BACKGROUND CONTROL
------------------------------ */
-
-let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
-
-function restartGIF(){
-bg.src = ""
-setTimeout(()=> bg.src = selectedBG, 30)
-}
-
-/* -----------------------------
-LOAD (FIXED)
+LOAD
 ----------------------------- */
 
 let loaded=0
 
 function checkLoaded(){
-
 loaded++
-
 if(loaded>=3){
 
 setTimeout(()=>{
@@ -148,11 +141,7 @@ container.style.opacity=1
 
 setTimeout(()=>document.getElementById("intro").remove(),500)
 
-/* CRITICAL: wait a frame before sizing */
-requestAnimationFrame(()=>{
-resizeCanvas()
 setState("overlay")
-})
 
 },800)
 
@@ -160,28 +149,16 @@ setState("overlay")
 }
 
 bg.onload=checkLoaded
-overlayImg.onload=checkLoaded
-overlay2Img.onload=checkLoaded
+overlay.onload=checkLoaded
+overlay2.onload=checkLoaded
 
-/* LOAD ALL (background included for layout) */
-bg.src=selectedBG
-overlayImg.src=overlayCID
-overlay2Img.src=overlay2CID
+/* Initial load */
 
-/* -----------------------------
-CANVAS
------------------------------ */
+let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
 
-function resizeCanvas(){
-
-canvas.width=bg.clientWidth
-canvas.height=bg.clientHeight
-
-draw()
-
-}
-
-window.addEventListener("resize",resizeCanvas)
+bg.src = selectedBG
+overlay.src = overlayCID
+overlay2.src = overlay2CID
 
 /* -----------------------------
 STATE MACHINE
@@ -195,39 +172,36 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
+/* Hide all */
+overlay.classList.add("hidden")
+overlay2.classList.add("hidden")
+bg.classList.add("hidden")
+
+/* Show current */
+if(state==="overlay"){
+overlay.classList.remove("hidden")
+}
+
 if(state==="overlay2"){
+overlay2.classList.remove("hidden")
 idleTimer=setTimeout(()=>setState("overlay"),7000)
 }
 
 if(state==="background"){
 restartGIF()
-idleTimer=setTimeout(()=>setState("overlay2"),15000)
+bg.classList.remove("hidden")
+idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
-
-draw()
 
 }
 
 /* -----------------------------
-DRAW
+GIF RESTART
 ----------------------------- */
 
-function draw(){
-
-if(canvas.width===0 || canvas.height===0) return
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-if(state==="overlay"){
-ctx.drawImage(overlayImg,0,0,canvas.width,canvas.height)
-}
-
-if(state==="overlay2"){
-ctx.drawImage(overlay2Img,0,0,canvas.width,canvas.height)
-}
-
-/* background = reveal */
-
+function restartGIF(){
+bg.src=""
+setTimeout(()=> bg.src = selectedBG, 30)
 }
 
 /* -----------------------------
