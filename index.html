@@ -40,32 +40,26 @@ width:800px;
 max-width:95vw;
 }
 
-/* ---------- Container ---------- */
+/* ---------- App ---------- */
 
 #container{
 position:relative;
 width:800px;
 max-width:95vw;
 opacity:0;
-touch-action:manipulation;
 cursor:pointer;
 }
 
-/* Perfect stacking */
+img{
+width:100%;
+display:block;
+}
 
-.layer{
+#overlayCanvas{
 position:absolute;
 top:0;
 left:0;
-width:100%;
-height:100%;
-object-fit:contain;
 }
-
-/* Visibility */
-
-.hidden{ opacity:0; }
-.visible{ opacity:1; transition:opacity 0.35s ease; }
 
 /* ---------- Shake ---------- */
 
@@ -86,19 +80,14 @@ animation:shake 0.35s;
 
 <body>
 
-<!-- Intro -->
-
 <div id="intro">
 <img src="https://ipfs.io/ipfs/bafybeigishjmv62vn2nsnzdnfuvz5437jj7qomzxvzwqrbb4me25qgxr3m">
 </div>
 
-<!-- App -->
-
 <div id="container">
 
-<img id="background" class="layer">
-<img id="overlay2" class="layer">
-<img id="overlay" class="layer">
+<img id="background">
+<canvas id="overlayCanvas"></canvas>
 
 </div>
 
@@ -120,12 +109,19 @@ ELEMENTS
 ----------------------------- */
 
 const bg=document.getElementById("background")
-const overlay=document.getElementById("overlay")
-const overlay2=document.getElementById("overlay2")
+const canvas=document.getElementById("overlayCanvas")
+const ctx=canvas.getContext("2d")
 const container=document.getElementById("container")
 
 /* -----------------------------
-LOAD (MATCHES ORIGINAL LOGIC)
+IMAGES
+----------------------------- */
+
+const overlayImg=new Image()
+const overlay2Img=new Image()
+
+/* -----------------------------
+LOAD
 ----------------------------- */
 
 let loaded=0
@@ -141,10 +137,9 @@ setTimeout(()=>{
 document.getElementById("intro").style.opacity=0
 container.style.opacity=1
 
-setTimeout(()=>{
-document.getElementById("intro").remove()
-},500)
+setTimeout(()=>document.getElementById("intro").remove(),500)
 
+resizeCanvas()
 setState("overlay")
 
 },800)
@@ -153,14 +148,27 @@ setState("overlay")
 }
 
 bg.onload=checkLoaded
-overlay.onload=checkLoaded
-overlay2.onload=checkLoaded
-
-/* Assign sources AFTER binding onload */
+overlayImg.onload=checkLoaded
+overlay2Img.onload=checkLoaded
 
 bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
-overlay.src=overlayCID
-overlay2.src=overlay2CID
+overlayImg.src=overlayCID
+overlay2Img.src=overlay2CID
+
+/* -----------------------------
+CANVAS
+----------------------------- */
+
+function resizeCanvas(){
+
+canvas.width=bg.clientWidth
+canvas.height=bg.clientHeight
+
+draw()
+
+}
+
+window.addEventListener("resize",resizeCanvas)
 
 /* -----------------------------
 STATE MACHINE
@@ -174,25 +182,37 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
-/* Hide all */
-overlay.classList.add("hidden")
-overlay2.classList.add("hidden")
-bg.classList.add("hidden")
-
-/* Show current */
-if(state==="overlay"){
-overlay.classList.remove("hidden")
-}
-
 if(state==="overlay2"){
-overlay2.classList.remove("hidden")
 idleTimer=setTimeout(()=>setState("overlay"),7000)
 }
 
 if(state==="background"){
-bg.classList.remove("hidden")
 idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
+
+draw()
+
+}
+
+/* -----------------------------
+DRAW
+----------------------------- */
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+/* Draw overlay states only */
+
+if(state==="overlay"){
+ctx.drawImage(overlayImg,0,0,canvas.width,canvas.height)
+}
+
+if(state==="overlay2"){
+ctx.drawImage(overlay2Img,0,0,canvas.width,canvas.height)
+}
+
+/* background = nothing drawn (reveals base image) */
 
 }
 
@@ -213,7 +233,7 @@ navigator.vibrate(60)
 }
 
 /* -----------------------------
-TAP HANDLING (FIXED)
+TAP HANDLING
 ----------------------------- */
 
 let tapTimeout=null
@@ -228,9 +248,7 @@ if(delta<280){
 clearTimeout(tapTimeout)
 handleDoubleTap()
 }else{
-tapTimeout=setTimeout(()=>{
-handleSingleTap()
-},250)
+tapTimeout=setTimeout(handleSingleTap,250)
 }
 
 lastTap=now
