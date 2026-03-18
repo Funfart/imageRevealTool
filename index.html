@@ -50,7 +50,8 @@ opacity:0;
 cursor:pointer;
 }
 
-img{
+/* IMPORTANT: background defines layout */
+#background{
 width:100%;
 display:block;
 }
@@ -94,7 +95,7 @@ animation:shake 0.35s;
 <script>
 
 /* -----------------------------
-IPFS CONFIG
+CONFIG
 ----------------------------- */
 
 const backgrounds=[
@@ -113,10 +114,6 @@ const canvas=document.getElementById("overlayCanvas")
 const ctx=canvas.getContext("2d")
 const container=document.getElementById("container")
 
-/* -----------------------------
-IMAGES
------------------------------ */
-
 const overlayImg=new Image()
 const overlay2Img=new Image()
 
@@ -125,23 +122,14 @@ BACKGROUND CONTROL
 ----------------------------- */
 
 let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
-let bgLoadedOnce = false
 
-function loadBackground(restart=false){
-
-if(restart){
-/* Force GIF restart */
+function restartGIF(){
 bg.src = ""
-setTimeout(()=> bg.src = selectedBG, 20)
-}else if(!bgLoadedOnce){
-bg.src = selectedBG
-bgLoadedOnce = true
-}
-
+setTimeout(()=> bg.src = selectedBG, 30)
 }
 
 /* -----------------------------
-LOAD (ONLY OVERLAYS FIRST)
+LOAD (FIXED)
 ----------------------------- */
 
 let loaded=0
@@ -150,7 +138,7 @@ function checkLoaded(){
 
 loaded++
 
-if(loaded>=2){ // overlays only
+if(loaded>=3){
 
 setTimeout(()=>{
 
@@ -159,17 +147,23 @@ container.style.opacity=1
 
 setTimeout(()=>document.getElementById("intro").remove(),500)
 
+/* CRITICAL: wait a frame before sizing */
+requestAnimationFrame(()=>{
 resizeCanvas()
 setState("overlay")
+})
 
 },800)
 
 }
 }
 
+bg.onload=checkLoaded
 overlayImg.onload=checkLoaded
 overlay2Img.onload=checkLoaded
 
+/* LOAD ALL (background included for layout) */
+bg.src=selectedBG
 overlayImg.src=overlayCID
 overlay2Img.src=overlay2CID
 
@@ -179,8 +173,8 @@ CANVAS
 
 function resizeCanvas(){
 
-canvas.width=container.clientWidth
-canvas.height=container.clientHeight
+canvas.width=bg.clientWidth
+canvas.height=bg.clientHeight
 
 draw()
 
@@ -200,15 +194,13 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
-/* Handle background loading */
-
-if(state==="background"){
-loadBackground(true) // restart GIF
-idleTimer=setTimeout(()=>setState("overlay"),15000)
-}
-
 if(state==="overlay2"){
 idleTimer=setTimeout(()=>setState("overlay"),7000)
+}
+
+if(state==="background"){
+restartGIF()
+idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
 
 draw()
@@ -221,6 +213,8 @@ DRAW
 
 function draw(){
 
+if(canvas.width===0 || canvas.height===0) return
+
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
 if(state==="overlay"){
@@ -231,7 +225,7 @@ if(state==="overlay2"){
 ctx.drawImage(overlay2Img,0,0,canvas.width,canvas.height)
 }
 
-/* background = nothing drawn */
+/* background = reveal */
 
 }
 
@@ -252,7 +246,7 @@ navigator.vibrate(60)
 }
 
 /* -----------------------------
-TAP HANDLING
+INPUT
 ----------------------------- */
 
 let tapTimeout=null
@@ -275,12 +269,10 @@ lastTap=now
 })
 
 function handleSingleTap(){
-
 if(state==="overlay"){
 feedback()
 setState("overlay2")
 }
-
 }
 
 function handleDoubleTap(){
@@ -295,11 +287,6 @@ setState("overlay")
 }
 
 }
-
-</script>
-
-</body>
-</html>
 
 </script>
 
