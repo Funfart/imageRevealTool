@@ -98,12 +98,10 @@ IPFS CONFIG
 ----------------------------- */
 
 const backgrounds=[
-//"https://ipfs.io/ipfs/bafybeiaqox3qexkwmrwlaq4aps6preyj6xsdv5g5i5mtnp36x25zju3wpm"
 "https://ipfs.io/ipfs/bafybeife4qi4eiwbiiefjvsclzbynqyysg4zmf4q4t65sc64tbri5hbjji"
 ]
 
 const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
-//const overlayCID="https://ipfs.io/ipfs/bafybeie6dd7iq4ajvfvhybbgppom5txmzmz5duo7h27576e5jinpads2ie"(gif)
 const overlay2CID="https://ipfs.io/ipfs/bafybeihqcfgnw4a2ef3ja4svibqxoijbtncnsa5ri6mcomts7cpsckguea"
 
 /* -----------------------------
@@ -123,7 +121,27 @@ const overlayImg=new Image()
 const overlay2Img=new Image()
 
 /* -----------------------------
-LOAD
+BACKGROUND CONTROL
+----------------------------- */
+
+let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
+let bgLoadedOnce = false
+
+function loadBackground(restart=false){
+
+if(restart){
+/* Force GIF restart */
+bg.src = ""
+setTimeout(()=> bg.src = selectedBG, 20)
+}else if(!bgLoadedOnce){
+bg.src = selectedBG
+bgLoadedOnce = true
+}
+
+}
+
+/* -----------------------------
+LOAD (ONLY OVERLAYS FIRST)
 ----------------------------- */
 
 let loaded=0
@@ -132,7 +150,7 @@ function checkLoaded(){
 
 loaded++
 
-if(loaded>=3){
+if(loaded>=2){ // overlays only
 
 setTimeout(()=>{
 
@@ -149,11 +167,9 @@ setState("overlay")
 }
 }
 
-bg.onload=checkLoaded
 overlayImg.onload=checkLoaded
 overlay2Img.onload=checkLoaded
 
-bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
 overlayImg.src=overlayCID
 overlay2Img.src=overlay2CID
 
@@ -163,8 +179,8 @@ CANVAS
 
 function resizeCanvas(){
 
-canvas.width=bg.clientWidth
-canvas.height=bg.clientHeight
+canvas.width=container.clientWidth
+canvas.height=container.clientHeight
 
 draw()
 
@@ -184,12 +200,15 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
-if(state==="overlay2"){
-idleTimer=setTimeout(()=>setState("overlay"),7000)
-}
+/* Handle background loading */
 
 if(state==="background"){
+loadBackground(true) // restart GIF
 idleTimer=setTimeout(()=>setState("overlay"),15000)
+}
+
+if(state==="overlay2"){
+idleTimer=setTimeout(()=>setState("overlay"),7000)
 }
 
 draw()
@@ -204,8 +223,6 @@ function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-/* Draw overlay states only */
-
 if(state==="overlay"){
 ctx.drawImage(overlayImg,0,0,canvas.width,canvas.height)
 }
@@ -214,7 +231,7 @@ if(state==="overlay2"){
 ctx.drawImage(overlay2Img,0,0,canvas.width,canvas.height)
 }
 
-/* background = nothing drawn (reveals base image) */
+/* background = nothing drawn */
 
 }
 
@@ -278,6 +295,11 @@ setState("overlay")
 }
 
 }
+
+</script>
+
+</body>
+</html>
 
 </script>
 
