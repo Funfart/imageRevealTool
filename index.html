@@ -100,7 +100,7 @@ transition:opacity 0.25s ease;
 }
 
 .shake{
-animation:shake 0.35s;
+animation:shake 0.25s;
 }
 
 </style>
@@ -144,7 +144,8 @@ ELEMENTS
 const bg=document.getElementById("background")
 const overlay=document.getElementById("overlay")
 const overlay2=document.getElementById("overlay2")
-const transition=document.getElementById("transition")
+let transition = document.getElementById("transition")
+//const transition=document.getElementById("transition")
 const container=document.getElementById("container")
 
 /* -----------------------------
@@ -236,22 +237,26 @@ feedback()
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
 
+/* 🔥 DESTROY + RECREATE IMAGE */
+const oldTransition = document.getElementById("transition")
+
+const newTransition = oldTransition.cloneNode(true)
+oldTransition.parentNode.replaceChild(newTransition, oldTransition)
+
+/* update reference */
+transition = newTransition
+
 transition.classList.remove("hidden")
+transition.src = transitionCID + "?t=" + Date.now() // cache bust
 
-/* 🔥 HARD RESET GIF (clean frame 0 start) */
-transition.src = ""
-requestAnimationFrame(()=>{
-  transition.src = transitionCID
-})
-
-/* 🔥 CUT BEFORE LOOP BECOMES VISIBLE */
+/* 🔥 HARD CUT */
 setTimeout(()=>{
 
 transition.classList.add("hidden")
 isTransitioning = false
 setState("background")
 
-},500) // 0.5 sec hard cutoff
+},350) // 🔥 slightly under 0.5 to avoid loop visibility
 
 }
 
