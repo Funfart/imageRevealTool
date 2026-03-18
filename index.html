@@ -228,21 +228,21 @@ function playTransitionToBackground(){
 
 feedback()
 
-/* Show transition */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
 
 transition.classList.remove("hidden")
 
-/* Restart transition GIF */
-transition.src=""
-setTimeout(()=> transition.src = transitionCID, 20)
+/* 🔥 stronger instant restart */
+transition.src = ""
+transition.offsetHeight
+transition.src = transitionCID
 
-/* After animation → background */
+/* 🔥 0.5 second duration */
 setTimeout(()=>{
-transition.classList.add("hidden")
-setState("background")
-},100) // adjust to your GIF duration
+  transition.classList.add("hidden")
+  setState("background")
+},500)
 
 }
 
