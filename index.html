@@ -224,7 +224,12 @@ idleTimer=setTimeout(()=>setState("overlay2"),15000)
 🔥 TRANSITION HANDLER
 ----------------------------- */
 
+let isTransitioning = false
+
 function playTransitionToBackground(){
+
+if(isTransitioning) return
+isTransitioning = true
 
 feedback()
 
@@ -233,16 +238,20 @@ overlay2.classList.add("hidden")
 
 transition.classList.remove("hidden")
 
-/* 🔥 stronger instant restart */
+/* 🔥 HARD RESET GIF (clean frame 0 start) */
 transition.src = ""
-transition.offsetHeight
-transition.src = transitionCID
+requestAnimationFrame(()=>{
+  transition.src = transitionCID
+})
 
-/* 🔥 0.5 second duration */
+/* 🔥 CUT BEFORE LOOP BECOMES VISIBLE */
 setTimeout(()=>{
-  transition.classList.add("hidden")
-  setState("background")
-},500)
+
+transition.classList.add("hidden")
+isTransitioning = false
+setState("background")
+
+},500) // 0.5 sec hard cutoff
 
 }
 
