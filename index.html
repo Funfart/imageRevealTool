@@ -53,7 +53,7 @@ touch-action:manipulation;
 cursor:pointer;
 }
 
-/* Base images */
+/* Images */
 
 img{
 width:100%;
@@ -61,7 +61,7 @@ display:block;
 pointer-events:none;
 }
 
-/* Overlay sits on top */
+/* Overlay */
 
 #overlay{
 position:absolute;
@@ -72,18 +72,33 @@ height:100%;
 transition:opacity 0.4s ease;
 }
 
+/* ---------- Shake Animation ---------- */
+
+@keyframes shake {
+0% { transform: translate(0, 0); }
+20% { transform: translate(-6px, 4px); }
+40% { transform: translate(6px, -4px); }
+60% { transform: translate(-4px, 2px); }
+80% { transform: translate(4px, -2px); }
+100% { transform: translate(0, 0); }
+}
+
+.shake{
+animation: shake 0.35s ease;
+}
+
 </style>
 </head>
 
 <body>
 
-<!-- Splash Intro -->
+<!-- Intro -->
 
 <div id="intro">
 <img src="https://ipfs.io/ipfs/bafybeigishjmv62vn2nsnzdnfuvz5437jj7qomzxvzwqrbb4me25qgxr3m">
 </div>
 
-<!-- Main Container -->
+<!-- App -->
 
 <div id="container">
 
@@ -110,6 +125,7 @@ Load Assets
 
 const bg=document.getElementById("background")
 const overlay=document.getElementById("overlay")
+const container=document.getElementById("container")
 
 bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
 overlay.src=overlayCID
@@ -123,7 +139,7 @@ if(loaded>=2){
 setTimeout(()=>{
 
 document.getElementById("intro").style.opacity=0
-document.getElementById("container").style.opacity=1
+container.style.opacity=1
 
 setTimeout(()=>{
 document.getElementById("intro").remove()
@@ -138,18 +154,50 @@ bg.onload=checkLoaded
 overlay.onload=checkLoaded
 
 /* -----------------------------
-Tap / Click Reveal Toggle
+Double Tap Detection
 ----------------------------- */
 
-let revealed=false
+let lastTap = 0
+let revealed = false
+const DOUBLE_TAP_DELAY = 300
 
-document.getElementById("container").addEventListener("pointerdown",()=>{
+container.addEventListener("pointerdown",(e)=>{
 
-revealed=!revealed
+const now = Date.now()
+const delta = now - lastTap
 
-overlay.style.opacity = revealed ? "0" : "1"
+if(delta < DOUBLE_TAP_DELAY && delta > 0){
+
+toggleReveal()
+
+}
+
+lastTap = now
 
 })
+
+/* -----------------------------
+Toggle Reveal + Effects
+----------------------------- */
+
+function toggleReveal(){
+
+revealed = !revealed
+
+// Switch visibility
+overlay.style.opacity = revealed ? "0" : "1"
+
+// Shake effect
+container.classList.remove("shake")
+void container.offsetWidth // force reflow
+container.classList.add("shake")
+
+// Haptic feedback (mobile)
+if(navigator.vibrate){
+navigator.vibrate(40)
+}
+
+}
 
 </script>
 
