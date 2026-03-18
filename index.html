@@ -92,7 +92,7 @@ pointer-events:none;
 animation:shake 0.25s;
 }
 
-/* 🔥 Background ambient shake */
+/* Background shake */
 
 @keyframes bgShake{
 0%{transform:translate(0);}
@@ -104,6 +104,20 @@ animation:shake 0.25s;
 
 .bg-shake{
 animation:bgShake 1.2s infinite;
+}
+
+/* 🔥 Strong shake (background2) */
+
+@keyframes bgShakeStrong{
+0%{transform:translate(0);}
+25%{transform:translate(-6px,3px);}
+50%{transform:translate(6px,-3px);}
+75%{transform:translate(-3px,-6px);}
+100%{transform:translate(0);}
+}
+
+.bg-shake-strong{
+animation:bgShakeStrong 0.6s infinite;
 }
 
 </style>
@@ -132,6 +146,8 @@ CONFIG
 const backgrounds=[
 "https://ipfs.io/ipfs/bafybeife4qi4eiwbiiefjvsclzbynqyysg4zmf4q4t65sc64tbri5hbjji"
 ]
+
+const background2CID="https://ipfs.io/ipfs/bafybeiaqox3qexkwmrwlaq4aps6preyj6xsdv5g5i5mtnp36x25zju3wpm"
 
 const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
 const overlay2CID="https://ipfs.io/ipfs/bafybeiesanxrr5dpc3u3psqlqqqhptpujtjpicrswe6zxlussaxjowibt4"
@@ -193,27 +209,32 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
-/* Reset all */
+/* Reset */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
-bg.classList.remove("bg-shake")
+bg.classList.remove("bg-shake","bg-shake-strong")
 
 if(state==="overlay"){
 overlay.classList.remove("hidden")
+bg.src = selectedBG
 }
 
 if(state==="overlay2"){
 overlay2.classList.remove("hidden")
+bg.src = selectedBG
 idleTimer=setTimeout(()=>setState("overlay"),9000)
 }
 
 if(state==="background"){
-restartGIF()
-
-/* 🔥 ambient shake ON */
+restartGIF(selectedBG)
 bg.classList.add("bg-shake")
-
 idleTimer=setTimeout(()=>setState("overlay2"),12000)
+}
+
+if(state==="background2"){
+restartGIF(background2CID)
+bg.classList.add("bg-shake-strong")
+idleTimer=setTimeout(()=>setState("background"),12000)
 }
 
 }
@@ -222,13 +243,13 @@ idleTimer=setTimeout(()=>setState("overlay2"),12000)
 GIF RESTART
 ----------------------------- */
 
-function restartGIF(){
+function restartGIF(src){
 bg.src=""
-setTimeout(()=> bg.src = selectedBG, 30)
+setTimeout(()=> bg.src = src, 30)
 }
 
 /* -----------------------------
-FEEDBACK (tap only)
+FEEDBACK
 ----------------------------- */
 
 function feedback(){
@@ -281,7 +302,11 @@ setState("background")
 }
 else if(state==="background"){
 feedback()
-setState("overlay")
+setState("background2")
+}
+else if(state==="background2"){
+feedback()
+setState("overlay2")
 }
 
 }
