@@ -50,7 +50,7 @@ opacity:0;
 cursor:pointer;
 }
 
-/* ✅ Background defines layout */
+/* Background */
 
 #background{
 width:100%;
@@ -59,7 +59,7 @@ position:relative;
 z-index:1;
 }
 
-/* Overlays */
+/* Layers */
 
 .layer{
 position:absolute;
@@ -71,6 +71,12 @@ object-fit:contain;
 z-index:2;
 }
 
+/* Transition sits above */
+
+#transition{
+z-index:3;
+}
+
 /* Visibility */
 
 .hidden{
@@ -80,7 +86,7 @@ pointer-events:none;
 
 .visible{
 opacity:1;
-transition:opacity 0.35s ease;
+transition:opacity 0.25s ease;
 }
 
 /* Shake */
@@ -111,6 +117,7 @@ animation:shake 0.35s;
 <img id="background">
 <img id="overlay2" class="layer">
 <img id="overlay" class="layer">
+<img id="transition" class="layer hidden">
 
 </div>
 
@@ -127,6 +134,9 @@ const backgrounds=[
 const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
 const overlay2CID="https://ipfs.io/ipfs/bafybeiesanxrr5dpc3u3psqlqqqhptpujtjpicrswe6zxlussaxjowibt4"
 
+/* 🔥 NEW TRANSITION */
+const transitionCID="https://ipfs.io/ipfs/bafybeifoma2wozrha3lj57b7ts5no52n6rrsbxw6p3w35ylbxd4fdd2axq"
+
 /* -----------------------------
 ELEMENTS
 ----------------------------- */
@@ -134,6 +144,7 @@ ELEMENTS
 const bg=document.getElementById("background")
 const overlay=document.getElementById("overlay")
 const overlay2=document.getElementById("overlay2")
+const transition=document.getElementById("transition")
 const container=document.getElementById("container")
 
 /* -----------------------------
@@ -144,7 +155,7 @@ let loaded=0
 
 function checkLoaded(){
 loaded++
-if(loaded>=3){
+if(loaded>=4){   // ✅ updated
 
 setTimeout(()=>{
 
@@ -163,6 +174,7 @@ setState("overlay")
 bg.onload=checkLoaded
 overlay.onload=checkLoaded
 overlay2.onload=checkLoaded
+transition.onload=checkLoaded
 
 /* Load assets */
 
@@ -171,6 +183,7 @@ let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
 bg.src = selectedBG
 overlay.src = overlayCID
 overlay2.src = overlay2CID
+transition.src = transitionCID
 
 /* -----------------------------
 STATE MACHINE
@@ -187,7 +200,9 @@ clearTimeout(idleTimer)
 /* Hide all */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
-bg.classList.remove("hidden") // background always visible
+transition.classList.add("hidden")
+
+bg.classList.remove("hidden")
 
 if(state==="overlay"){
 overlay.classList.remove("hidden")
@@ -202,6 +217,32 @@ if(state==="background"){
 restartGIF()
 idleTimer=setTimeout(()=>setState("overlay2"),15000)
 }
+
+}
+
+/* -----------------------------
+🔥 TRANSITION HANDLER
+----------------------------- */
+
+function playTransitionToBackground(){
+
+feedback()
+
+/* Show transition */
+overlay.classList.add("hidden")
+overlay2.classList.add("hidden")
+
+transition.classList.remove("hidden")
+
+/* Restart transition GIF */
+transition.src=""
+setTimeout(()=> transition.src = transitionCID, 20)
+
+/* After animation → background */
+setTimeout(()=>{
+transition.classList.add("hidden")
+setState("background")
+},1200) // adjust to your GIF duration
 
 }
 
@@ -263,13 +304,31 @@ setState("overlay2")
 function handleDoubleTap(){
 
 if(state==="overlay2"){
-feedback()
-setState("background")
+playTransitionToBackground() // ✅ replaced
 }
 else if(state==="background"){
 feedback()
 setState("overlay")
 }
+
+}
+
+/* -----------------------------
+IDLE OVERRIDE (overlay2 → transition)
+----------------------------- */
+
+/* Replace overlay2 timer behavior */
+
+const originalSetState = setState
+
+setState = function(newState){
+
+if(state==="overlay2" && newState==="background"){
+playTransitionToBackground()
+return
+}
+
+originalSetState(newState)
 
 }
 
