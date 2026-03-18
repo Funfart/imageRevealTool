@@ -16,11 +16,11 @@ display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-font-family:sans-serif;
 overflow:hidden;
+font-family:sans-serif;
 }
 
-/* ---------- Splash Intro ---------- */
+/* ---------- Intro ---------- */
 
 #intro{
 position:fixed;
@@ -39,10 +39,9 @@ transition:opacity 0.8s ease;
 #intro img{
 width:800px;
 max-width:95vw;
-filter:drop-shadow(0 0 30px rgba(255,255,255,0.2));
 }
 
-/* ---------- App ---------- */
+/* ---------- Container ---------- */
 
 #container{
 position:relative;
@@ -59,32 +58,35 @@ img{
 width:100%;
 display:block;
 pointer-events:none;
-}
-
-/* Overlay */
-
-#overlay{
 position:absolute;
 top:0;
 left:0;
-width:100%;
-height:100%;
-transition:opacity 0.4s ease;
 }
+
+/* Layering */
+
+#background{ z-index:1; }
+#overlay{ z-index:3; }
+#overlay2{ z-index:2; }
+
+/* Visibility */
+
+.hidden{ opacity:0; }
+.visible{ opacity:1; transition:opacity 0.4s ease; }
 
 /* ---------- Shake Animation ---------- */
 
 @keyframes shake {
-0% { transform: translate(0, 0); }
-20% { transform: translate(-6px, 4px); }
-40% { transform: translate(6px, -4px); }
-60% { transform: translate(-4px, 2px); }
-80% { transform: translate(4px, -2px); }
-100% { transform: translate(0, 0); }
+0% { transform:translate(0,0); }
+20% { transform:translate(-5px,5px); }
+40% { transform:translate(5px,-5px); }
+60% { transform:translate(-5px,-5px); }
+80% { transform:translate(5px,5px); }
+100% { transform:translate(0,0); }
 }
 
 .shake{
-animation: shake 0.35s ease;
+animation:shake 0.4s;
 }
 
 </style>
@@ -104,6 +106,7 @@ animation: shake 0.35s ease;
 
 <img id="background">
 <img id="overlay">
+<img id="overlay2">
 
 </div>
 
@@ -119,31 +122,39 @@ const backgrounds=[
 
 const overlayCID="https://ipfs.io/ipfs/bafybeie6dd7iq4ajvfvhybbgppom5txmzmz5duo7h27576e5jinpads2ie"
 
+const overlay2CID="https://ipfs.io/ipfs/bafybeihqcfgnw4a2ef3ja4svibqxoijbtncnsa5ri6mcomts7cpsckguea"
+
 /* -----------------------------
-Load Assets
+ELEMENTS
 ----------------------------- */
 
 const bg=document.getElementById("background")
 const overlay=document.getElementById("overlay")
+const overlay2=document.getElementById("overlay2")
 const container=document.getElementById("container")
+
+/* -----------------------------
+LOAD
+----------------------------- */
 
 bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
 overlay.src=overlayCID
+overlay2.src=overlay2CID
 
 let loaded=0
 
 function checkLoaded(){
 loaded++
-if(loaded>=2){
+if(loaded>=3){
 
 setTimeout(()=>{
 
 document.getElementById("intro").style.opacity=0
 container.style.opacity=1
 
-setTimeout(()=>{
-document.getElementById("intro").remove()
-},500)
+setTimeout(()=>document.getElementById("intro").remove(),500)
+
+setState("overlay")
 
 },800)
 
@@ -152,49 +163,109 @@ document.getElementById("intro").remove()
 
 bg.onload=checkLoaded
 overlay.onload=checkLoaded
+overlay2.onload=checkLoaded
 
 /* -----------------------------
-Double Tap Detection
+STATE SYSTEM
 ----------------------------- */
 
-let lastTap = 0
-let revealed = false
-const DOUBLE_TAP_DELAY = 300
+let state="overlay"
+let idleTimer=null
 
-container.addEventListener("pointerdown",(e)=>{
+function setState(newState){
 
-const now = Date.now()
-const delta = now - lastTap
+state=newState
+resetIdle()
 
-if(delta < DOUBLE_TAP_DELAY && delta > 0){
+overlay.classList.add("hidden")
+overlay2.classList.add("hidden")
+bg.classList.add("hidden")
 
-toggleReveal()
+if(state==="overlay"){
+overlay.classList.remove("hidden")
+}
+
+if(state==="overlay2"){
+overlay2.classList.remove("hidden")
+startIdle(7000, ()=>setState("overlay"))
+}
+
+if(state==="background"){
+bg.classList.remove("hidden")
+startIdle(15000, ()=>setState("overlay"))
+}
 
 }
 
-lastTap = now
+/* -----------------------------
+IDLE TIMER
+----------------------------- */
+
+function startIdle(time,callback){
+clearTimeout(idleTimer)
+idleTimer=setTimeout(callback,time)
+}
+
+function resetIdle(){
+clearTimeout(idleTimer)
+}
+
+/* -----------------------------
+SHAKE + HAPTIC
+----------------------------- */
+
+function triggerFeedback(){
+
+container.classList.remove("shake")
+void container.offsetWidth
+container.classList.add("shake")
+
+if(navigator.vibrate){
+navigator.vibrate(60)
+}
+
+}
+
+/* -----------------------------
+INPUT HANDLING
+----------------------------- */
+
+let lastTap=0
+
+container.addEventListener("pointerdown",()=>{
+
+const now=Date.now()
+const delta=now-lastTap
+
+if(delta<300){
+handleDoubleTap()
+}else{
+handleSingleTap()
+}
+
+lastTap=now
 
 })
 
-/* -----------------------------
-Toggle Reveal + Effects
------------------------------ */
+function handleSingleTap(){
 
-function toggleReveal(){
+if(state==="overlay"){
+triggerFeedback()
+setState("overlay2")
+}
 
-revealed = !revealed
+}
 
-// Switch visibility
-overlay.style.opacity = revealed ? "0" : "1"
+function handleDoubleTap(){
 
-// Shake effect
-container.classList.remove("shake")
-void container.offsetWidth // force reflow
-container.classList.add("shake")
+if(state==="overlay2"){
+triggerFeedback()
+setState("background")
+}
 
-// Haptic feedback (mobile)
-if(navigator.vibrate){
-navigator.vibrate(40)
+else if(state==="background"){
+triggerFeedback()
+setState("overlay")
 }
 
 }
