@@ -71,12 +71,6 @@ object-fit:contain;
 z-index:2;
 }
 
-/* Transition sits above */
-
-#transition{
-z-index:3;
-}
-
 /* Visibility */
 
 .hidden{
@@ -84,12 +78,7 @@ opacity:0;
 pointer-events:none;
 }
 
-.visible{
-opacity:1;
-transition:opacity 0.25s ease;
-}
-
-/* Shake */
+/* Tap Shake */
 
 @keyframes shake{
 0%{transform:translate(0);}
@@ -101,6 +90,20 @@ transition:opacity 0.25s ease;
 
 .shake{
 animation:shake 0.25s;
+}
+
+/* 🔥 Background ambient shake */
+
+@keyframes bgShake{
+0%{transform:translate(0);}
+25%{transform:translate(-2px,1px);}
+50%{transform:translate(2px,-1px);}
+75%{transform:translate(-1px,-2px);}
+100%{transform:translate(0);}
+}
+
+.bg-shake{
+animation:bgShake 1.2s infinite;
 }
 
 </style>
@@ -117,7 +120,6 @@ animation:shake 0.25s;
 <img id="background">
 <img id="overlay2" class="layer">
 <img id="overlay" class="layer">
-<img id="transition" class="layer hidden">
 
 </div>
 
@@ -134,9 +136,6 @@ const backgrounds=[
 const overlayCID="https://ipfs.io/ipfs/bafybeibyizz6tlehmoxuoozqmiqzsbf7g57c6io7dpjfpubluo6bynkjdq"
 const overlay2CID="https://ipfs.io/ipfs/bafybeiesanxrr5dpc3u3psqlqqqhptpujtjpicrswe6zxlussaxjowibt4"
 
-/* 🔥 NEW TRANSITION */
-const transitionCID="https://ipfs.io/ipfs/bafybeifoma2wozrha3lj57b7ts5no52n6rrsbxw6p3w35ylbxd4fdd2axq"
-
 /* -----------------------------
 ELEMENTS
 ----------------------------- */
@@ -144,8 +143,6 @@ ELEMENTS
 const bg=document.getElementById("background")
 const overlay=document.getElementById("overlay")
 const overlay2=document.getElementById("overlay2")
-let transition = document.getElementById("transition")
-//const transition=document.getElementById("transition")
 const container=document.getElementById("container")
 
 /* -----------------------------
@@ -156,7 +153,7 @@ let loaded=0
 
 function checkLoaded(){
 loaded++
-if(loaded>=4){   // ✅ updated
+if(loaded>=3){
 
 setTimeout(()=>{
 
@@ -175,7 +172,6 @@ setState("overlay")
 bg.onload=checkLoaded
 overlay.onload=checkLoaded
 overlay2.onload=checkLoaded
-transition.onload=checkLoaded
 
 /* Load assets */
 
@@ -184,7 +180,6 @@ let selectedBG = backgrounds[Math.floor(Math.random()*backgrounds.length)]
 bg.src = selectedBG
 overlay.src = overlayCID
 overlay2.src = overlay2CID
-transition.src = transitionCID
 
 /* -----------------------------
 STATE MACHINE
@@ -198,12 +193,10 @@ function setState(newState){
 state=newState
 clearTimeout(idleTimer)
 
-/* Hide all */
+/* Reset all */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
-transition.classList.add("hidden")
-
-bg.classList.remove("hidden")
+bg.classList.remove("bg-shake")
 
 if(state==="overlay"){
 overlay.classList.remove("hidden")
@@ -216,47 +209,12 @@ idleTimer=setTimeout(()=>setState("overlay"),7000)
 
 if(state==="background"){
 restartGIF()
-idleTimer=setTimeout(()=>setState("overlay2"),15000)
+
+/* 🔥 ambient shake ON */
+bg.classList.add("bg-shake")
+
+idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
-
-}
-
-/* -----------------------------
-🔥 TRANSITION HANDLER
------------------------------ */
-
-let isTransitioning = false
-
-function playTransitionToBackground(){
-
-if(isTransitioning) return
-isTransitioning = true
-
-feedback()
-
-overlay.classList.add("hidden")
-overlay2.classList.add("hidden")
-
-/* 🔥 DESTROY + RECREATE IMAGE */
-const oldTransition = document.getElementById("transition")
-
-const newTransition = oldTransition.cloneNode(true)
-oldTransition.parentNode.replaceChild(newTransition, oldTransition)
-
-/* update reference */
-transition = newTransition
-
-transition.classList.remove("hidden")
-transition.src = transitionCID + "?t=" + Date.now() // cache bust
-
-/* 🔥 HARD CUT */
-setTimeout(()=>{
-
-transition.classList.add("hidden")
-isTransitioning = false
-setState("background")
-
-},350) // 🔥 slightly under 0.5 to avoid loop visibility
 
 }
 
@@ -270,7 +228,7 @@ setTimeout(()=> bg.src = selectedBG, 30)
 }
 
 /* -----------------------------
-FEEDBACK
+FEEDBACK (tap only)
 ----------------------------- */
 
 function feedback(){
@@ -318,31 +276,13 @@ setState("overlay2")
 function handleDoubleTap(){
 
 if(state==="overlay2"){
-playTransitionToBackground() // ✅ replaced
+feedback()
+setState("background")
 }
 else if(state==="background"){
 feedback()
 setState("overlay")
 }
-
-}
-
-/* -----------------------------
-IDLE OVERRIDE (overlay2 → transition)
------------------------------ */
-
-/* Replace overlay2 timer behavior */
-
-const originalSetState = setState
-
-setState = function(newState){
-
-if(state==="overlay2" && newState==="background"){
-playTransitionToBackground()
-return
-}
-
-originalSetState(newState)
 
 }
 
