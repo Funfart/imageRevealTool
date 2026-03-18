@@ -17,7 +17,6 @@ justify-content:center;
 align-items:center;
 height:100vh;
 overflow:hidden;
-font-family:sans-serif;
 }
 
 /* ---------- Intro ---------- */
@@ -52,41 +51,34 @@ touch-action:manipulation;
 cursor:pointer;
 }
 
-/* Images */
+/* Perfect stacking */
 
-img{
-width:100%;
-display:block;
-pointer-events:none;
+.layer{
 position:absolute;
 top:0;
 left:0;
+width:100%;
+height:100%;
+object-fit:contain;
 }
-
-/* Layering */
-
-#background{ z-index:1; }
-#overlay{ z-index:3; }
-#overlay2{ z-index:2; }
 
 /* Visibility */
 
 .hidden{ opacity:0; }
-.visible{ opacity:1; transition:opacity 0.4s ease; }
+.visible{ opacity:1; transition:opacity 0.35s ease; }
 
-/* ---------- Shake Animation ---------- */
+/* ---------- Shake ---------- */
 
-@keyframes shake {
-0% { transform:translate(0,0); }
-20% { transform:translate(-5px,5px); }
-40% { transform:translate(5px,-5px); }
-60% { transform:translate(-5px,-5px); }
-80% { transform:translate(5px,5px); }
-100% { transform:translate(0,0); }
+@keyframes shake{
+0%{transform:translate(0,0);}
+25%{transform:translate(-6px,4px);}
+50%{transform:translate(6px,-4px);}
+75%{transform:translate(-4px,-6px);}
+100%{transform:translate(0,0);}
 }
 
 .shake{
-animation:shake 0.4s;
+animation:shake 0.35s;
 }
 
 </style>
@@ -104,9 +96,9 @@ animation:shake 0.4s;
 
 <div id="container">
 
-<img id="background">
-<img id="overlay">
-<img id="overlay2">
+<img id="background" class="layer">
+<img id="overlay2" class="layer">
+<img id="overlay" class="layer">
 
 </div>
 
@@ -121,7 +113,6 @@ const backgrounds=[
 ]
 
 const overlayCID="https://ipfs.io/ipfs/bafybeie6dd7iq4ajvfvhybbgppom5txmzmz5duo7h27576e5jinpads2ie"
-
 const overlay2CID="https://ipfs.io/ipfs/bafybeihqcfgnw4a2ef3ja4svibqxoijbtncnsa5ri6mcomts7cpsckguea"
 
 /* -----------------------------
@@ -134,17 +125,15 @@ const overlay2=document.getElementById("overlay2")
 const container=document.getElementById("container")
 
 /* -----------------------------
-LOAD
+LOAD (MATCHES ORIGINAL LOGIC)
 ----------------------------- */
-
-bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
-overlay.src=overlayCID
-overlay2.src=overlay2CID
 
 let loaded=0
 
 function checkLoaded(){
+
 loaded++
+
 if(loaded>=3){
 
 setTimeout(()=>{
@@ -152,7 +141,9 @@ setTimeout(()=>{
 document.getElementById("intro").style.opacity=0
 container.style.opacity=1
 
-setTimeout(()=>document.getElementById("intro").remove(),500)
+setTimeout(()=>{
+document.getElementById("intro").remove()
+},500)
 
 setState("overlay")
 
@@ -165,8 +156,14 @@ bg.onload=checkLoaded
 overlay.onload=checkLoaded
 overlay2.onload=checkLoaded
 
+/* Assign sources AFTER binding onload */
+
+bg.src=backgrounds[Math.floor(Math.random()*backgrounds.length)]
+overlay.src=overlayCID
+overlay2.src=overlay2CID
+
 /* -----------------------------
-STATE SYSTEM
+STATE MACHINE
 ----------------------------- */
 
 let state="overlay"
@@ -175,46 +172,35 @@ let idleTimer=null
 function setState(newState){
 
 state=newState
-resetIdle()
+clearTimeout(idleTimer)
 
+/* Hide all */
 overlay.classList.add("hidden")
 overlay2.classList.add("hidden")
 bg.classList.add("hidden")
 
+/* Show current */
 if(state==="overlay"){
 overlay.classList.remove("hidden")
 }
 
 if(state==="overlay2"){
 overlay2.classList.remove("hidden")
-startIdle(7000, ()=>setState("overlay"))
+idleTimer=setTimeout(()=>setState("overlay"),7000)
 }
 
 if(state==="background"){
 bg.classList.remove("hidden")
-startIdle(15000, ()=>setState("overlay"))
+idleTimer=setTimeout(()=>setState("overlay"),15000)
 }
 
 }
 
 /* -----------------------------
-IDLE TIMER
+FEEDBACK
 ----------------------------- */
 
-function startIdle(time,callback){
-clearTimeout(idleTimer)
-idleTimer=setTimeout(callback,time)
-}
-
-function resetIdle(){
-clearTimeout(idleTimer)
-}
-
-/* -----------------------------
-SHAKE + HAPTIC
------------------------------ */
-
-function triggerFeedback(){
+function feedback(){
 
 container.classList.remove("shake")
 void container.offsetWidth
@@ -227,9 +213,10 @@ navigator.vibrate(60)
 }
 
 /* -----------------------------
-INPUT HANDLING
+TAP HANDLING (FIXED)
 ----------------------------- */
 
+let tapTimeout=null
 let lastTap=0
 
 container.addEventListener("pointerdown",()=>{
@@ -237,10 +224,13 @@ container.addEventListener("pointerdown",()=>{
 const now=Date.now()
 const delta=now-lastTap
 
-if(delta<300){
+if(delta<280){
+clearTimeout(tapTimeout)
 handleDoubleTap()
 }else{
+tapTimeout=setTimeout(()=>{
 handleSingleTap()
+},250)
 }
 
 lastTap=now
@@ -250,7 +240,7 @@ lastTap=now
 function handleSingleTap(){
 
 if(state==="overlay"){
-triggerFeedback()
+feedback()
 setState("overlay2")
 }
 
@@ -259,12 +249,11 @@ setState("overlay2")
 function handleDoubleTap(){
 
 if(state==="overlay2"){
-triggerFeedback()
+feedback()
 setState("background")
 }
-
 else if(state==="background"){
-triggerFeedback()
+feedback()
 setState("overlay")
 }
 
